@@ -7,11 +7,13 @@ from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.output_parsers.openai_functions import JsonOutputFunctionsParser
+from langchain.llms.base import LLM
 from langchain.pydantic_v1 import BaseModel, Field
 from langchain.tools import BaseTool, StructuredTool, tool
+from langserve_launch_example.runpod_wrapper import sql_agent
 
 
-def create_agent(llm: ChatOpenAI, tools: list, system_prompt: str):
+def create_agent(llm: LLM, tools: list, system_prompt: str):
     # Each worker node will be given a name and some tools.
     prompt = ChatPromptTemplate.from_messages(
         [
@@ -33,7 +35,7 @@ def agent_node(state, agent, name):
     return {"messages": [HumanMessage(content=result["output"], name=name)]}
 
 
-members = ["SQLGenerator", "DBRetriever"]
+members = ["DatabaseRetriever", "InsightGenerator"]
 system_prompt = (
     "You are a supervisor tasked with managing a conversation between the"
     " following workers:  {members}. Given the following user request,"
@@ -101,25 +103,26 @@ def generate_sql(query: str) -> str:
 
 
 @tool
-def retrieve_data(query: str) -> str:
-    """Retrieve data from a database."""
+def retrieve_vectordb_data(query: str) -> str:
+    """Retrieve data from VectorDB."""
     return "Data retrieved."
 
 
-sql_agent = create_agent(llm, [generate_sql], "You are a sql generator.")
+# sql_agent = create_agent(llm, [generate_sql], "You are a database retriever.")
 sql_node = functools.partial(
-    agent_node, agent=sql_agent, name="SQLGenerator")
+    agent_node, agent=sql_agent, name="DatabaseRetriever")
 
-db_agent = create_agent(
+insight_generator_agent = create_agent(
     llm,
-    [retrieve_data],
-    "You may now retrieve data from the database.",
+    [retrieve_vectordb_data],
+    "You may retrieve data from VectorDB and generate insights.",
 )
-db_node = functools.partial(agent_node, agent=db_agent, name="DBRetriever")
+insight_generator_node = functools.partial(
+    agent_node, agent=insight_generator_agent, name="InsightGenerator")
 
 workflow = StateGraph(AgentState)
-workflow.add_node("SQLGenerator", sql_node)
-workflow.add_node("DBRetriever", db_node)
+workflow.add_node("DatabaseRetriever", sql_node)
+workflow.add_node("InsightGenerator", insight_generator_node)
 workflow.add_node("supervisor", supervisor_chain)
 
 for member in members:

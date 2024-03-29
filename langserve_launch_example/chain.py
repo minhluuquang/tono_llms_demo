@@ -73,8 +73,8 @@ graph.add_conditional_edges("oracle", router, {
 
 runnable = graph.compile()
 
-result = runnable.invoke(HumanMessage("What is your name?"))
-print(result)
+# result = runnable.invoke(HumanMessage("What is your name?"))
+# print(result)
 
 
 def get_chain() -> Runnable:
