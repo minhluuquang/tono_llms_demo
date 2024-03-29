@@ -10,7 +10,7 @@ from langchain.output_parsers.openai_functions import JsonOutputFunctionsParser
 from langchain.llms.base import LLM
 from langchain.pydantic_v1 import BaseModel, Field
 from langchain.tools import BaseTool, StructuredTool, tool
-from langserve_launch_example.runpod_wrapper import sql_agent
+from langserve_launch_example.sql_agent import sql_agent
 
 
 def create_agent(llm: LLM, tools: list, system_prompt: str):
